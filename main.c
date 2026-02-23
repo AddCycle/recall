@@ -32,7 +32,13 @@ int main(int argc, char* argv[])
   hints.ai_socktype = SOCK_STREAM;
 
   // resolve server address and port
-  const char *server_ip = "127.0.0.1"; // default: locahost
+  char *server_ip = "127.0.0.1"; // default: locahost
+  if (argc > 2)
+  {
+    server_ip = argv[2];
+    printf("server ip: %s\n", argv[2]);
+  }
+
   iResult = getaddrinfo(server_ip, DEFAULT_PORT, &hints, &result);
   if (iResult != 0)
   {
