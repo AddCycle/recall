@@ -7,38 +7,94 @@
 #include <stdlib.h>
 #include <string.h>
 
+void append_text(HWND hEdit, const char *text)
+{
+  int len = GetWindowTextLengthA(hEdit);
+
+  SendMessageA(hEdit, EM_SETSEL, len, len); // move cursor to the end
+  SendMessageA(hEdit, EM_REPLACESEL, FALSE, (LPARAM)text);
+}
+
 void handle_input_send(AppData *data)
 {
-  char input[255];    // edit
-  char oldText[4096]; // static ->
-  char final[8192];   // -> static
+  char input[255]; // raw user input
 
   GetWindowTextA(data->hEdit, input, sizeof(input));
 
   if (strlen(input) == 0)
     return;
 
-  GetWindowTextA(data->hStatic, oldText, sizeof(oldText));
+  char line[512];
+  snprintf(line, sizeof(line), "%s: %s\r\n", data->userData.username, input);
 
-  snprintf(final, sizeof(final), "%s%s: %s\n", oldText, data->userData.username, input);
-
-  SetWindowTextA(data->hStatic, final);
+  append_text(data->hStatic, line);
 
   SetWindowTextA(data->hEdit, ""); // reset edit
 
   send(data->socket, input, strlen(input), 0);
 }
 
+LRESULT CALLBACK UserInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+Window user_input(char *title)
+{
+  HINSTANCE hInstance = GetModuleHandleA(0);
+
+  Window window = {
+      .title = title};
+
+  WNDCLASS wc = {
+      .lpfnWndProc = UserInputProc,
+      .lpszClassName = "user_input",
+      .hInstance = hInstance};
+
+  if (!RegisterClassA(&wc))
+  {
+    printf("error registering user_input class");
+  }
+
+  int dwStyle = WS_VISIBLE | WS_DLGFRAME;
+  int width = 300;
+  int height = 100;
+  int x = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
+  int y = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
+  HWND hwnd = CreateWindowExA(0, wc.lpszClassName, title, dwStyle, x, y, width, height, NULL, NULL, hInstance, NULL);
+
+  if (!hwnd)
+  {
+    printf("error the window is not created properly");
+  }
+
+  window.hwnd = hwnd;
+
+  ShowWindow(hwnd, SW_SHOW);
+
+  return window;
+}
+
 LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-  if (msg == WM_KEYDOWN && wParam == VK_RETURN)
+  if (msg == WM_CHAR && wParam == '\r')
   {
-    HWND parent = GetParent(hwnd);
+    if (GetKeyState(VK_SHIFT) & 0x8000)
+    {
+      // allow normal newline
+      return CallWindowProc(
+          (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
+          hwnd, msg, wParam, lParam);
+    }
+    else
+    {
+      // send message instead of newline
+      HWND parent = GetParent(hwnd);
+      AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
 
-    AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
-    handle_input_send(data);
-
-    return 0; // to stop the windows "ding" sfx
+      handle_input_send(data);
+      return 0; // prevent beep and prevent newline
+    }
   }
 
   return CallWindowProc(
@@ -68,12 +124,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     data->hButton = create_button(hwnd);
     data->hStatic = create_static(hwnd);
 
-    WNDPROC oldProc = (WNDPROC)SetWindowLongPtr(
+    // edit procedure
+    WNDPROC oldEditProc = (WNDPROC)SetWindowLongPtrA(
         data->hEdit,
         GWLP_WNDPROC,
         (LONG_PTR)EditProc);
-
-    SetWindowLongPtr(data->hEdit, GWLP_USERDATA, (LONG_PTR)oldProc);
+    SetWindowLongPtrA(data->hEdit, GWLP_USERDATA, (LONG_PTR)oldEditProc);
 
     break;
   }
@@ -181,7 +237,7 @@ Window create_window(int width, int height, const char *title)
   int x = (screenWidth - width) / 2;
   int y = (screenHeight - height) / 2;
 
-  int dwStyle = WS_OVERLAPPEDWINDOW;
+  int dwStyle = WS_OVERLAPPEDWINDOW | WS_TABSTOP;
 
   AppData *data = malloc(sizeof(AppData));
 
@@ -204,16 +260,6 @@ Window create_window(int width, int height, const char *title)
   return window;
 }
 
-void create_menu(Window window)
-{
-  HMENU hMenu = CreateMenu();
-  int id = 0;
-  AppendMenuA(hMenu, MF_STRING, id++, "File");
-  AppendMenuA(hMenu, MF_STRING, id++, "Info");
-
-  SetMenu(window.hwnd, hMenu);
-}
-
 HWND create_edit(HWND hwnd)
 {
   HINSTANCE hInstance = GetModuleHandleA(0);
@@ -221,7 +267,7 @@ HWND create_edit(HWND hwnd)
   GetClientRect(hwnd, &rect);
   int windowWidth = rect.right - rect.left;
   int windowHeight = rect.bottom - rect.top;
-  int dwStyle = WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP;
+  int dwStyle = WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL;
 
   int margin = 10;
   int height = 20;
@@ -258,14 +304,14 @@ HWND create_static(HWND hwnd)
   GetClientRect(hwnd, &rect);
   int windowWidth = rect.right - rect.left;
   int windowHeight = rect.bottom - rect.top;
-  int dwStyle = WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP;
+  int dwStyle = WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_READONLY;
 
   int margin = 10;
   int width = windowWidth - margin * 2;
   int x = margin;
   int y = margin;
   int height = windowHeight - (40 + margin);
-  HWND hwnd_text_area = CreateWindowExA(0, "static", "", dwStyle, x, y, width, height, hwnd, NULL, hInstance, NULL);
+  HWND hwnd_text_area = CreateWindowExA(0, "edit", "", dwStyle, x, y, width, height, hwnd, NULL, hInstance, NULL);
   return hwnd_text_area;
 }
 

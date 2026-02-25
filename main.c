@@ -2,9 +2,9 @@
 #include "network.h"
 #include <stdbool.h>
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-  char* username = "default_username";
+  char *username = "default_username";
 
   if (argc > 1)
   {
@@ -73,16 +73,28 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  // immediately send the username to the server
-  send(clientSocket, username, strlen(username), 0);
-
   Window window = create_window(800, 600, "Recall");
+  
+  // poll username
+  // TODO: fix this part isn't working
+  // user_input("Hello window");
+  // char buffer[255];
+  // snprintf(buffer, sizeof(buffer), "Prompt to the user: %s", username);
+  // if (MessageBoxA(window.hwnd, "Go inside the app ?", buffer, MB_ICONQUESTION | MB_YESNO) == IDNO)
+  // {
+  //   DestroyWindow(window.hwnd);
+  //   WSACleanup();
+  //   return 0;
+  // }
 
   AppData *data = (AppData *)GetWindowLongPtr(window.hwnd, GWLP_USERDATA);
   data->socket = clientSocket;
   data->running = true;
   data->hThread = CreateThread(NULL, 0, NetworkThread, data, 0, NULL);
   data->userData.username = username;
+
+  // immediately send the username to the server
+  send(clientSocket, username, strlen(username), 0);
 
   // main message loop
   MSG msg;

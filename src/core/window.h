@@ -7,6 +7,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define WINDOWS_IMPLEMENTATION
 
+#define IDD_USERNAME 1001
+
 #include <windows.h>
 #include <winsock2.h>
 
@@ -30,14 +32,16 @@ typedef struct {
   UserData userData;
 } AppData;
 
+LRESULT CALLBACK UserInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 HWND create_edit(HWND hwnd);
 HWND create_button(HWND hwnd);
 HWND create_static(HWND hwnd);
 void handle_input_send(AppData *data);
+Window user_input(char* title); // TODO
+void append_text(HWND hEdit, const char *text);
 
 #endif
 
 Window create_window(int width, int height, const char* title);
-void create_menu(Window window);

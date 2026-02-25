@@ -8,4 +8,4 @@ Chat with people & enjoy
 `q` + `Enter` (stdin) : stops the server
 
 ## Client
-`./client.exe [username]` : The recall application that connects to the server & lets you chat with other clients
+`./client.exe [username] [server_ip]` : The recall application that connects to the server & lets you chat with other clients
