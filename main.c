@@ -75,17 +75,7 @@ int main(int argc, char *argv[])
 
   Window window = create_window(800, 600, "Recall");
   
-  // poll username
-  // TODO: fix this part isn't working
-  // user_input("Hello window");
-  // char buffer[255];
-  // snprintf(buffer, sizeof(buffer), "Prompt to the user: %s", username);
-  // if (MessageBoxA(window.hwnd, "Go inside the app ?", buffer, MB_ICONQUESTION | MB_YESNO) == IDNO)
-  // {
-  //   DestroyWindow(window.hwnd);
-  //   WSACleanup();
-  //   return 0;
-  // }
+  // TODO: poll username
 
   AppData *data = (AppData *)GetWindowLongPtr(window.hwnd, GWLP_USERDATA);
   data->socket = clientSocket;

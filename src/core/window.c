@@ -7,6 +7,40 @@
 #include <stdlib.h>
 #include <string.h>
 
+void adjust_height(Window window)
+{
+  HWND hEdit = window.hwnd;
+  int lines = SendMessageA(hEdit, EM_GETLINECOUNT, 0, 0);
+
+  int baseHeight = 20;
+  int perLine = 20;
+
+  RECT r;
+  GetWindowRect(hEdit, &r);
+
+  int oldHeight = r.bottom - r.top;
+  int newHeight = baseHeight + (lines - 1) * perLine;
+
+  int delta = newHeight - oldHeight; // how much we grow
+
+  HWND parent = GetParent(hEdit);
+
+  POINT pt = {r.left, r.top};
+  ScreenToClient(parent, &pt);
+
+  // Move UP by delta
+  int newY = pt.y - delta;
+
+  SetWindowPos(
+      hEdit,
+      NULL,
+      pt.x,
+      newY,
+      r.right - r.left,
+      newHeight,
+      SWP_NOZORDER);
+}
+
 void reset_window_placement(Window editWindow)
 {
   SetWindowPos(
@@ -16,33 +50,6 @@ void reset_window_placement(Window editWindow)
       editWindow.y,
       editWindow.width,
       editWindow.height,
-      SWP_NOZORDER);
-}
-
-void grow_height(Window editWindow, int amount)
-{
-  RECT r;
-  HWND hEdit = editWindow.hwnd;
-  GetWindowRect(hEdit, &r);
-
-  int width = r.right - r.left;
-  int height = r.bottom - r.top + amount;
-
-  // convert screen to parent client coords
-  HWND parent = GetParent(hEdit);
-  POINT pt = {r.left, r.top};
-
-  ScreenToClient(parent, &pt);
-  int x = pt.x;
-  int y = pt.y;
-
-  SetWindowPos(
-      hEdit,
-      NULL,
-      x,
-      y - 20,
-      width,
-      height,
       SWP_NOZORDER);
 }
 
@@ -116,17 +123,14 @@ Window user_input(char *title)
 
 LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+  HWND parent = GetParent(hwnd);
+  AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
+
   if (msg == WM_CHAR && wParam == '\r')
   {
-    HWND parent = GetParent(hwnd);
-    AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
-
-    if (GetKeyState(VK_SHIFT) & 0x8000)
+    // normal newline
+    if (GetKeyState(VK_SHIFT) & 0x8000) // or 0x0001 toggled like caps lock
     {
-      // allow normal newline
-
-      grow_height(data->editWindow, 20);
-
       return CallWindowProc(
           (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
           hwnd, msg, wParam, lParam);
@@ -134,12 +138,34 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     else
     {
       // send message instead of newline
-      reset_height(data->editWindow);
+      reset_window_placement(data->editWindow);
 
       handle_input_send(data);
       return 0; // prevent beep and prevent newline
     }
   }
+
+  // ctrl+a : selects everything
+  if (msg == WM_CHAR && wParam == 0x01)
+  {
+    if (GetKeyState(VK_CONTROL) & 0x8000)
+    {
+      int end = GetWindowTextLengthA(hwnd);
+      SendMessageA(hwnd, EM_SETSEL, (WPARAM)0, (LPARAM)end);
+      return 0;
+    }
+  }
+
+  // TODO -> ctrl+delete : deletes the whole word
+  // if (msg == WM_KEYDOWN && wParam == VK_BACK)
+  // {
+  //   if (GetKeyState(VK_CONTROL) & 0x8000)
+  //   {
+  //     int end = GetWindowTextLengthA(hwnd);
+  //     // SendMessageA(hwnd, EM_SETSEL, (WPARAM)0, (LPARAM)end);
+  //     return 0;
+  //   }
+  // }
 
   return CallWindowProc(
       (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
@@ -207,6 +233,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
       handle_input_send(data);
     }
+
+    if (HIWORD(wParam) == EN_CHANGE)
+    {
+      HWND hEdit = (HWND)lParam;
+
+      AppData *data = (AppData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
+      if (hEdit == data->hEdit)
+      {
+        adjust_height(data->editWindow);
+      }
+    }
+
     break;
   }
   case WM_PAINT:
@@ -318,13 +357,13 @@ Window create_edit(HWND hwnd)
   window.width = 300;
   int x = margin;
 
-  HWND hwnd_edit = CreateWindowExA(0, "edit", "Type a message here...", dwStyle, x, y, window.width, window.height, hwnd, NULL, hInstance, NULL);
+  HWND hwnd_edit = CreateWindowEx(0, "edit", "", dwStyle, x, y, window.width, window.height, hwnd, NULL, hInstance, NULL);
 
   window.x = x;
   window.y = y;
 
   window.hwnd = hwnd_edit;
-  
+
   return window;
 }
 

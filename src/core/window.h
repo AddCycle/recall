@@ -48,4 +48,3 @@ void append_text(HWND hEdit, const char *text);
 
 Window create_window(int width, int height, const char* title);
 void reset_window_placement(Window window);
-void grow_height(Window editWindow, int amount);
