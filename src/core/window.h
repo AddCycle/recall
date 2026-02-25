@@ -15,6 +15,7 @@
 typedef struct Window
 {
   int id;
+  int x, y;
   int width, height;
   const char* title;
   HWND hwnd;
@@ -25,6 +26,7 @@ typedef struct UserData {
 } UserData;
 
 typedef struct {
+  Window editWindow;
   HWND hwnd, hEdit, hButton, hStatic;
   SOCKET socket;
   HANDLE hThread;
@@ -35,7 +37,7 @@ typedef struct {
 LRESULT CALLBACK UserInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-HWND create_edit(HWND hwnd);
+Window create_edit(HWND hwnd);
 HWND create_button(HWND hwnd);
 HWND create_static(HWND hwnd);
 void handle_input_send(AppData *data);
@@ -45,3 +47,5 @@ void append_text(HWND hEdit, const char *text);
 #endif
 
 Window create_window(int width, int height, const char* title);
+void reset_window_placement(Window window);
+void grow_height(Window editWindow, int amount);

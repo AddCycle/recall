@@ -7,6 +7,45 @@
 #include <stdlib.h>
 #include <string.h>
 
+void reset_window_placement(Window editWindow)
+{
+  SetWindowPos(
+      editWindow.hwnd,
+      NULL,
+      editWindow.x,
+      editWindow.y,
+      editWindow.width,
+      editWindow.height,
+      SWP_NOZORDER);
+}
+
+void grow_height(Window editWindow, int amount)
+{
+  RECT r;
+  HWND hEdit = editWindow.hwnd;
+  GetWindowRect(hEdit, &r);
+
+  int width = r.right - r.left;
+  int height = r.bottom - r.top + amount;
+
+  // convert screen to parent client coords
+  HWND parent = GetParent(hEdit);
+  POINT pt = {r.left, r.top};
+
+  ScreenToClient(parent, &pt);
+  int x = pt.x;
+  int y = pt.y;
+
+  SetWindowPos(
+      hEdit,
+      NULL,
+      x,
+      y - 20,
+      width,
+      height,
+      SWP_NOZORDER);
+}
+
 void append_text(HWND hEdit, const char *text)
 {
   int len = GetWindowTextLengthA(hEdit);
@@ -15,7 +54,6 @@ void append_text(HWND hEdit, const char *text)
   SendMessageA(hEdit, EM_REPLACESEL, FALSE, (LPARAM)text);
 }
 
-// TODO : make the buffer sizes coherents
 void handle_input_send(AppData *data)
 {
   char input[4096]; // raw user input
@@ -80,9 +118,15 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
   if (msg == WM_CHAR && wParam == '\r')
   {
+    HWND parent = GetParent(hwnd);
+    AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
+
     if (GetKeyState(VK_SHIFT) & 0x8000)
     {
       // allow normal newline
+
+      grow_height(data->editWindow, 20);
+
       return CallWindowProc(
           (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
           hwnd, msg, wParam, lParam);
@@ -90,8 +134,7 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     else
     {
       // send message instead of newline
-      HWND parent = GetParent(hwnd);
-      AppData *data = (AppData *)GetWindowLongPtr(parent, GWLP_USERDATA);
+      reset_height(data->editWindow);
 
       handle_input_send(data);
       return 0; // prevent beep and prevent newline
@@ -121,7 +164,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     AppData *data = (AppData *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
     data->hwnd = hwnd;
-    data->hEdit = create_edit(hwnd);
+
+    // edit
+    data->editWindow = create_edit(hwnd);
+    data->hEdit = data->editWindow.hwnd;
+
     data->hButton = create_button(hwnd);
     data->hStatic = create_static(hwnd);
 
@@ -254,8 +301,10 @@ Window create_window(int width, int height, const char *title)
   return window;
 }
 
-HWND create_edit(HWND hwnd)
+Window create_edit(HWND hwnd)
 {
+  Window window;
+
   HINSTANCE hInstance = GetModuleHandleA(0);
   RECT rect;
   GetClientRect(hwnd, &rect);
@@ -264,12 +313,19 @@ HWND create_edit(HWND hwnd)
   int dwStyle = WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL;
 
   int margin = 10;
-  int height = 20;
-  int y = windowHeight - height - margin;
-  int width = 300;
+  window.height = 20;
+  int y = windowHeight - window.height - margin;
+  window.width = 300;
   int x = margin;
-  HWND hwnd_edit = CreateWindowExA(0, "edit", "Type a message here...", dwStyle, x, y, width, height, hwnd, NULL, hInstance, NULL);
-  return hwnd_edit;
+
+  HWND hwnd_edit = CreateWindowExA(0, "edit", "Type a message here...", dwStyle, x, y, window.width, window.height, hwnd, NULL, hInstance, NULL);
+
+  window.x = x;
+  window.y = y;
+
+  window.hwnd = hwnd_edit;
+  
+  return window;
 }
 
 HWND create_button(HWND hwnd)
