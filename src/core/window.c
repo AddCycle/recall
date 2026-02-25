@@ -15,16 +15,17 @@ void append_text(HWND hEdit, const char *text)
   SendMessageA(hEdit, EM_REPLACESEL, FALSE, (LPARAM)text);
 }
 
+// TODO : make the buffer sizes coherents
 void handle_input_send(AppData *data)
 {
-  char input[255]; // raw user input
+  char input[4096]; // raw user input
 
   GetWindowTextA(data->hEdit, input, sizeof(input));
 
   if (strlen(input) == 0)
     return;
 
-  char line[512];
+  char line[4096];
   snprintf(line, sizeof(line), "%s: %s\r\n", data->userData.username, input);
 
   append_text(data->hStatic, line);
@@ -139,17 +140,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     char *received = (char *)lParam;
 
-    char oldText[4096];
-    char final[8192];
+    char line[4096];
+    snprintf(line, sizeof(line), "%s\r\n", received);
 
-    GetWindowTextA(data->hStatic, oldText, sizeof(oldText));
-
-    snprintf(final, sizeof(final),
-             "%s%s\r\n",
-             oldText,
-             received);
-
-    SetWindowTextA(data->hStatic, final);
+    append_text(data->hStatic, line);
 
     free(received);
     break;
