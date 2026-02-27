@@ -1,5 +1,5 @@
 objs=src/network/network.c src/core/window.c
-libs=-luser32 -lcomctl32
+libs=-luser32 -lcomctl32 -lgdi32
 includes=\
 -I src \
 -I src/core \

@@ -11,6 +11,8 @@
 
 #include <windows.h>
 #include <winsock2.h>
+#include <wingdi.h>
+#include <commctrl.h>
 
 typedef struct Window
 {

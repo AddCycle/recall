@@ -167,6 +167,35 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
   //   }
   // }
 
+  switch (msg)
+  {
+  case WM_PAINT:
+  {
+    LRESULT result = CallWindowProc(
+        (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
+        hwnd, msg, wParam, lParam);
+
+    if (GetWindowTextLengthA(hwnd) == 0)
+    {
+      HDC hdc = GetDC(hwnd);
+
+      SetTextColor(hdc, RGB(150, 150, 150));
+      SetBkMode(hdc, TRANSPARENT);
+
+      RECT r;
+      GetClientRect(hwnd, &r);
+
+      DrawTextA(hdc, "Send message...", -1, &r, DT_VCENTER);
+
+      ReleaseDC(hwnd, hdc);
+    }
+
+    return result;
+  }
+  default:
+    break;
+  }
+
   return CallWindowProc(
       (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA),
       hwnd, msg, wParam, lParam);
@@ -250,6 +279,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   }
   case WM_PAINT:
   {
+    AppData *data = (AppData *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hwnd, &ps);
 
