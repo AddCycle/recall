@@ -1,6 +1,28 @@
 #include "network.h"
 #include "window.h"
 
+// temp until Linux, MacOS implementations to ensure Network struct exists
+#ifdef _WIN32
+
+int InitNetwork(Network network)
+{
+  // INIT WSA (networking)
+  int result;
+  result = WSAStartup(MAKEWORD(2, 2), &network.wsaData);
+
+  if (result != 0)
+  {
+    printf("WSAStartup failed with code: %d\n", result);
+  }
+
+  return result;
+}
+
+void NetworkCleanup(Network network)
+{
+  WSACleanup();
+}
+
 DWORD WINAPI NetworkThread(LPVOID param)
 {
   AppData *data = (AppData *)param;
@@ -20,3 +42,5 @@ DWORD WINAPI NetworkThread(LPVOID param)
 
   return 0;
 }
+
+#endif _WIN32

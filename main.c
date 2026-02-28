@@ -13,14 +13,13 @@ int main(int argc, char *argv[])
 
   Network network;
 
-  // INIT WSA (networking)
   int iResult;
-  iResult = WSAStartup(MAKEWORD(2, 2), &network.wsaData);
+  iResult = InitNetwork(network);
 
   if (iResult != 0)
   {
-    printf("WSAStartup failed with code: %d\n", iResult);
-    return 1;
+    NetworkCleanup(network);
+    NETWORK_EXIT(1, "Network init failed with code: %d\n", iResult);
   }
 
   // specifying the connection
@@ -42,19 +41,18 @@ int main(int argc, char *argv[])
   iResult = getaddrinfo(server_ip, DEFAULT_PORT, &hints, &result);
   if (iResult != 0)
   {
-    printf("getaddrinfo failed: %d\n", iResult);
-    WSACleanup();
-    return 1;
+    NetworkCleanup(network);
+    NETWORK_EXIT(1, "getaddrinfo failed with code: %d\n", iResult);
   }
 
   // create socket
   SOCKET clientSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
   if (clientSocket == INVALID_SOCKET)
   {
-    printf("Error at socket(): %d\n", WSAGetLastError());
+    int code = WSAGetLastError();
     freeaddrinfo(result);
-    WSACleanup();
-    return 1;
+    NetworkCleanup(network);
+    NETWORK_EXIT("Error at socket(): %d\n", code);
   }
 
   // connect to the server
@@ -68,9 +66,8 @@ int main(int argc, char *argv[])
   freeaddrinfo(result);
   if (clientSocket == INVALID_SOCKET)
   {
-    printf("Unable to connect to server!\n");
-    WSACleanup();
-    return 1;
+    NetworkCleanup(network);
+    NETWORK_EXIT(1, "Unable to connect to server!\n");
   }
 
   Window window = create_window(800, 600, "Recall");
@@ -94,6 +91,6 @@ int main(int argc, char *argv[])
     DispatchMessageA(&msg);
   }
 
-  WSACleanup();
+  NetworkCleanup(network);
   return 0;
 }

@@ -156,17 +156,6 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
   }
 
-  // TODO -> ctrl+delete : deletes the whole word
-  // if (msg == WM_KEYDOWN && wParam == VK_BACK)
-  // {
-  //   if (GetKeyState(VK_CONTROL) & 0x8000)
-  //   {
-  //     int end = GetWindowTextLengthA(hwnd);
-  //     // SendMessageA(hwnd, EM_SETSEL, (WPARAM)0, (LPARAM)end);
-  //     return 0;
-  //   }
-  // }
-
   switch (msg)
   {
   case WM_PAINT:
@@ -184,6 +173,8 @@ LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
       RECT r;
       GetClientRect(hwnd, &r);
+      r.left += 3;
+      r.top += 2;
 
       DrawTextA(hdc, "Send message...", -1, &r, DT_VCENTER);
 
@@ -364,7 +355,7 @@ Window create_window(int width, int height, const char *title)
   GetClientRect(window.hwnd, &rect);
   window.width = rect.right - rect.left;
   window.height = rect.bottom - rect.top;
-  printf("client_width, client_height:%d,%d\n", window.width, window.height);
+  printf("client_width, client_height: %d, %d\n", window.width, window.height);
 
   ShowWindow(window.hwnd, SW_SHOW);
 
