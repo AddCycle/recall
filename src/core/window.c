@@ -7,6 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+bool play_wav_volume(const char *path, float volume)
+{
+  // volume = 0.0f .. 1.0f
+  DWORD dwVolume = (DWORD)(volume * 0xFFFF) & 0xFFFF;
+  dwVolume = (dwVolume << 16) | dwVolume; // pour gauche+droite
+  waveOutSetVolume(NULL, dwVolume);       // NULL = device par défaut
+
+  return PlaySoundA(path, NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
 void adjust_height(Window window)
 {
   HWND hEdit = window.hwnd;
@@ -227,7 +237,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     break;
   }
-  case WM_APP + 1:
+  case WM_APP + 1: // on message received
   {
     AppData *data = (AppData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
@@ -239,6 +249,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     append_text(data->hStatic, line);
 
     free(received);
+
+    if (!play_wav_volume("C:\\Windows\\Media\\notify.wav", 0.4f))
+    {
+      printf("PlaySound failed, error: %lu\n", GetLastError());
+    }
+    else
+    {
+      printf("Sound played\n");
+    }
     break;
   }
   case WM_KEYDOWN:

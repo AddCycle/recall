@@ -13,6 +13,9 @@
 #include <winsock2.h>
 #include <wingdi.h>
 #include <commctrl.h>
+#include <mmsystem.h>
+
+#pragma comment(lib, "winmm.lib")
 
 typedef struct Window
 {
@@ -45,6 +48,7 @@ HWND create_static(HWND hwnd);
 void handle_input_send(AppData *data);
 Window user_input(char* title); // TODO
 void append_text(HWND hEdit, const char *text);
+bool play_wav_volume(const char *path, float volume);
 
 #endif
 

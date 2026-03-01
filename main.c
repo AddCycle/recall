@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     int code = WSAGetLastError();
     freeaddrinfo(result);
     NetworkCleanup(network);
-    NETWORK_EXIT("Error at socket(): %d\n", code);
+    NETWORK_EXIT(1, "Error at socket(): %d\n", code);
   }
 
   // connect to the server
